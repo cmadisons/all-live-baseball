@@ -2132,6 +2132,59 @@
     #quizBody .qresult{text-align:center;padding:14px}
     #quizBody .qresult .big{font-size:44px;margin:6px 0}
     #quizBody .qresult .aw{color:var(--gold);font-weight:800;font-size:20px;margin-top:8px}
+  
+    /* ---- roster editor -------------------------------------------------
+       A full-screen sheet rather than a panel, because 646 players need
+       the room and the game underneath keeps playing regardless. */
+    #rosterBox {
+      position: fixed; inset: 0; z-index: 90;
+      background: rgba(0,0,0,.6); display: none;
+      align-items: flex-start; justify-content: center; padding: 3vh 12px;
+      backdrop-filter: blur(3px);
+    }
+    .rCard {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 14px; width: min(46rem, 100%); max-height: 94vh;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .rHead { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+    .rHead b { font-size: 16px; }
+    .rHead .rNum2 { color: var(--dim); font-size: 12px; margin-left: auto; }
+    .rTools { padding: 10px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap; }
+    .rTools input {
+      flex: 1; min-width: 10rem; background: var(--panel2); color: var(--ink);
+      border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font: inherit;
+    }
+    #rosterList { overflow-y: auto; padding: 8px 12px 16px; }
+    .rTeam {
+      display: flex; width: 100%; align-items: center; gap: 8px;
+      background: none; border: none; border-bottom: 1px solid var(--line);
+      color: var(--ink); font: inherit; font-weight: 700; text-align: left;
+      padding: 11px 6px; cursor: pointer;
+    }
+    .rTeam:hover { color: var(--accent); }
+    .rTeam.open { color: var(--accent); }
+    .rTeam .rNum { margin-left: auto; color: var(--dim); font-weight: 400; font-size: 12px; }
+    .rRow { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 18px; }
+    .rRow .rWho { width: 11rem; flex: none; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rRow .rSong {
+      flex: 1; min-width: 0; background: var(--panel2); color: var(--ink);
+      border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font: inherit; font-size: 13px;
+    }
+    .rRow .rSong:focus { outline: none; border-color: var(--accent); }
+    .rRow .rDel { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 14px; padding: 4px 6px; }
+    .rRow .rDel:hover { color: var(--red); }
+    .rAdd {
+      display: block; width: calc(100% - 18px); margin: 6px 0 12px 18px;
+      background: none; border: 1px dashed var(--line); border-radius: 9px;
+      color: var(--dim); font: inherit; font-size: 13px; padding: 8px; cursor: pointer;
+    }
+    .rAdd:hover { border-color: var(--accent); color: var(--accent); }
+    .rEmpty { color: var(--dim); text-align: center; padding: 22px 0; font-size: 13px; }
+    @media (max-width: 560px) {
+      .rRow { flex-wrap: wrap; }
+      .rRow .rWho { width: 100%; }
+    }
   </style>
   <div id="quizOverlay" class="overlay">
     <div class="statsbox">
@@ -2337,6 +2390,7 @@
             <button class="btn" id="walkup" title="Walk-up song">🎵 Off</button>
             <button class="btn" id="hear" title="Hear the umpire">🔇 Ump</button>
             <button class="btn" id="speed" title="Replay speed">1×</button>
+            <button class="btn" id="rosterBtn" title="Rosters &amp; walk-up songs">📝 Rosters</button>
           </div>
         </div>
         <div class="feed" id="feed">
@@ -4027,8 +4081,411 @@
       "Chase Petty": "The Box — Roddy Ricch",
       "Tony Santillan": "WWE: Hands Of Fate (Oba Femi) — def rebel",
       "Tejay Antone": "Blah Blah Blah — Armin van Buuren",
-      "Zach Maxwell": "Man in the Box — Alice In Chains"
+      "Zach Maxwell": "Man in the Box — Alice In Chains",
+
+      /* Filled in by hand, from what the players are known to use. */
+      "Iván Herrera": "El Hokage — Eladio Carrion",
+      "Garrett Stubbs": "Golden Boy — Nadav Guedj",
+      "Matt Reynolds": "Big Lie — Post Malone",
+      "Robert Gasser": "Believe — The Bravery",
+      "Justin Foscue": "Waves — Kanye West",
+      "Joey Estes": "I'm So Oakland \u2014 The Mekanix",
+      "Brian Serven": "God's Country \u2014 Blake Shelton",
+      "Blake Walston": "Ice Ice Baby — Vanilla Ice",
+      "Alec Gamboa": "My Town — Montgomery Gentry",
+      "Rece Hinds": "Love — Keyshia Cole",
+      "Tommy White": "Desperado — Rihanna",
+      /* ------------------------------------------------------------
+         Walk-up songs from the teams' own published lists.
+         Where a player had several, the most recent is used. These
+         sit at the end on purpose: a later key wins in a JS object,
+         so they quietly replace anything above.
+         ------------------------------------------------------------ */
+      // Arizona Diamondbacks
+      "A.J. Puk": "Intro — Meek Mill",
+      "Adrian Del Castillo": "CORAÇAO - 20th Anniversary Mix — Jerry Ropero · HUGEL · Mijangos · Jesús Fernández",
+      "Andrew Saalfrank": "Bigger Than Me — Big Sean · The Flint Chozen Choir · Starrah",
+      "Brandon Pfaadt": "Intro — The xx",
+      "Brandyn Garcia": "Rump Shaker — Wreckx-N-Effect",
+      "Corbin Burnes": "Friends In Low Places — The Sounds Of Garth Brooks",
+      "Corbin Carroll": "E85 — Don Toliver",
+      "Drey Jameson": "Dreams and Nightmares — Meek Mill",
+      "Eduardo Rodriguez": "Jamaican (Bam Bam) — HUGEL · SOLTO (FR)",
+      "Gabriel Moreno": "Taboo — Don Omar",
+      "Geraldo Perdomo": "El Mejor - Remix — Yeison Jimenez · Chayín Rubio",
+      "Ildemaro Vargas": "Oh Yeah — Yello",
+      "James McCann": "El Campeón — El Kimiko y Yordy · Michel Boutic · EL YORDY DK",
+      "Jonathan Loáisiga": "Welcome To The Jungle — Guns N' Roses",
+      "Jordan Lawlar": "No Flex Just Faith — DIAMOND DISTRICT MUSIC",
+      "Jorge Barrosa": "I Adore You (feat. Daecolm) — HUGEL · Topic · Arash · Daecolm",
+      "Jose Fernandez": "Chapa Pla Pla — Omega · Alofoke Music · B One El Productor De Oro",
+      "Juan Morillo": "Pa' Que Retozen — Tego Calderón",
+      "Justin Martinez": "Fireman — Lil Wayne",
+      "Ketel Marte": "PANTI Y COLALE 2.0 — El Alfa · De La Ghetto · Zion · DJ Chulo NYC · El Cherry Scom · La Greña · Ronny GTA · Ezzy R",
+      "Kevin Ginkel": "The Pretender — Foo Fighters",
+      "Kohl Drake": "The Chain - 2004 Remaster — Fleetwood Mac",
+      "Lars Nootbaar": "Brighter — RÜFÜS DU SOL",
+      "Lourdes Gurriel Jr.": "Fácil - Prod. by Dj Honda x Roberto Ferrante — Bebeshito · Dj Honda · Roberto Ferrante",
+      "LuJames Groover": "I'm so Groovy — Future",
+      "Max Kepler": "Doin' Time — Sublime",
+      "Merrill Kelly": "Under Ground Kings — Drake",
+      "Michael Soroka": "Interstate Love Song - 2019 Remaster — Stone Temple Pilots",
+      "Nolan Arenado": "TOO COOL TO BE CARELESS — PAWSA",
+      "Paul Sewald": "Jump Around — House Of Pain",
+      "Philip Abner": "Read Me My Rights — Brantley Gilbert",
+      "Ryan Thompson": "Praise Him Forever — Jervis Campbell",
+      "Ryan Waldschmidt": "The Way I Are — Timbaland · Keri Hilson · D.O.E.",
+      "Ryne Nelson": "Vampire - Feat. Whiteboy John — Tribal Seeds",
+      "Taylor Clarke": "Seven Nation Army — The White Stripes",
+      "Tim Tawa": "Remember the Name (feat. Styles of Beyond) — Fort Minor · Styles Of Beyond",
+      "Tommy Troy": "ORCHESTRATË — Yeat",
+      "Tyler Locklear": "Sour Patch Kids — Bryce Vine",
+      "Zac Gallen": "Let The Beat Build - Album Version (Edited) — Lil Wayne",
+      // Athletics
+      "Brent Rooker": "Hotel California - 2013 Remaster — Eagles",
+      "Darell Hernaiz": "VOY A LLeVARTE PA PR — Bad Bunny",
+      "Denzel Clarke": "Get It On The Floor — DMX · Swizz Beatz",
+      "Gunnar Hoglund": "Juke Box Hero — Foreigner",
+      "Jeffrey Springs": "No Diggity — Blackstreet · Dr. Dre · Queen Pen",
+      "Justin Sterner": "Gasoline — Audioslave",
+      "Luis Morales": "Bendecido — Dale Pututi · Randy Malcom",
+      "Luis Severino": "Hermoso Momento - Remix — Farruko · Kairo Worship",
+      "Mark Leiter Jr.": "The Mountain — Dierks Bentley",
+      "Nick Kurtz": "Do I Wanna Know? — Arctic Monkeys",
+      "Shea Langeliers": "Ride Wit Me — Nelly · City Spud",
+      "Zack Gelof": "Doin' Time — Sublime",
+      // Atlanta Braves
+      "Brewer Hicklen": "Tremble - Live — Mosaic MSC",
+      "DaShawn Keirsey Jr.": "NEVER GET USED TO THIS (with JVKE) — Forrest Frank · JVKE",
+      "Hurston Waldrep": "I Won't Back Down — Tom Petty",
+      "JR Ritchie": "Everlong — Foo Fighters",
+      "James Karinchak": "The Politics & The Life — Daniel Pemberton · Gareth Williams",
+      "Joe Jiménez": "Runnin — 21 Savage · Metro Boomin",
+      "Joey Wentz": "Be (Intro) — Common",
+      "Reynaldo López": "Halloween Theme — John Carpenter · Cody Carpenter · Daniel Davies",
+      "Robert Suarez": "Bandoleros — Don Omar · Tego Calderón",
+      "Spencer Schwellenbach": "Hit This Hard — Post Malone",
+      "Spencer Strider": "Right Hand On My Heart — The Whigs",
+      // Baltimore Orioles
+      "Albert Suárez": "Danza Kuduro — Don Omar · Lucenzo",
+      "Andrew Kittredge": "Crimson and Clover — Joan Jett & the Blackhearts",
+      "Anthony Nunez": "WALK — Hulvey · Lecrae",
+      "Blaze Alexander": "STARGAZING — Travis Scott",
+      "Brandon Young": "Cold — Crossfade",
+      "Cade Povich": "Wonderwall — Oasis",
+      "Cameron Foster": "Evenflow — Pearl Jam",
+      "Carlos Narváez": "Heartless — Kanye West",
+      "Chris Bassitt": "Growin' Up and Gettin' Old — Luke Combs",
+      "Christian Encarnacion-Strand": "White Horse — Chris Stapleton",
+      "Coby Mayo": "AT THE PARTY (feat. Pharrell Williams, Travis Scott) — Kid Cudi · Pharrell Williams · Travis Scott",
+      "Codi Heuer": "Wherever I May Roam — Metallica",
+      "Colton Cowser": "Work — Gang Starr",
+      "Dylan Beavers": "Overdue (with Travis Scott) — Metro Boomin · Travis Scott",
+      "Félix Bautista": "Saxofones Mágicos — Los Avila",
+      "Grant Wolfram": "Outlaw State Of Mind — Chris Stapleton",
+      "Gunnar Henderson": "The Sweet Escape — Gwen Stefani · Akon",
+      "Heston Kjerstad": "Save a Horse (Ride a Cowboy) — Big & Rich",
+      "Jackson Holliday": "Mr. Blue Sky — Electric Light Orchestra",
+      "Jeremiah Jackson": "Revolution — Kirk Franklin & The Family",
+      "Jordan Westburg": "Like a Stone — Audioslave",
+      "Keegan Akin": "Animals — Nickelback",
+      "Kyle Bradish": "Memories (feat. Kid Cudi) — David Guetta · Kid Cudi",
+      "Leody Taveras": "Las Avispas — Juan Luis Guerra 4.40",
+      "Pete Alonso": "Money for Nothing — Dire Straits",
+      "Reed Trimble": "Arkansas — Chris Stapleton",
+      "Rico Garcia": "Vampire — Tribal Seeds",
+      "Ryan Helsley": "Hells Bells — AC/DC",
+      "Ryan Mountcastle": "Dear Maria, Count Me In — All Time Low",
+      "Samuel Basallo": "Misericordia — Onell Diaz · Farruko",
+      "Shane Baz": "Rooster (2022 Remaster) — Alice In Chains",
+      "Trevor Rogers": "Sharp Dressed Man (2008 Remaster) — ZZ Top",
+      "Trey Gibson": "Stranglehold — Ted Nugent",
+      "Tyler O'Neill": "The Motto — Drake · Lil Wayne",
+      "Yaramil Hiraldo": "Vivir Mi Vida — Marc Anthony",
+      "Yennier Cano": "Como Te Pago — Lenier",
+      "Yohel Pozo": "capaz (merengueton) — Alleh · Yorghaki",
+      "Yosver Zulueta": "Nada Me Afecta — El Kamel · El Dany MG",
+      "Zach Eflin": "Heartache Tonight - 2013 Remaster — Eagles",
+      // Boston Red Sox
+      "Adley Rutschman": "Alive (nightmare) - Album Version (Edited) — Kid Cudi · Ratatat",
+      "Andruw Monasterio": "El Duro — Don Omar · Kendo Kapponi",
+      "Anthony Seigler": "Hey Ya! — Outkast",
+      "Aroldis Chapman": "La Vida Es Un Carnaval — Celia Cruz",
+      "Brayan Bello": "La Fama 21 — Don Miguelo · Lapiz Conciente",
+      "Brett Harris": "Psalms 139 — Caleb Gordon",
+      "Caleb Durbin": "Alive (nightmare) — Kid Cudi · Ratatat",
+      "Ceddanne Rafaela": "Quienes Son Ustedes — Eladio Carrion",
+      "Connor Wong": "Wanna Be A Baller - Album Version (Edited) — Lil' Troy",
+      "Curtis Mead": "Holdin On — Flume",
+      "Eduardo Rivera": "JOVEN LEYENDA — Myke Towers",
+      "Eli White": "Twice As Hard — The Black Crowes",
+      "Erik Miller": "A Milli - Album Version (Edited) — Lil Wayne",
+      "Garrett Crochet": "Rooster (2022 Remaster) — Alice In Chains",
+      "Garrett Whitlock": "Bury Me in Georgia — Kane Brown",
+      "Greg Weissert": "Chill Bill (feat. J. Davi$ & Spooks) — Rob $tone · J. Davi$ · J Spooks",
+      "Isiah KinerFalefa": "What Did I Miss? — Drake",
+      "Jahmai Jones": "Hi Roller — Lil Uzi Vert",
+      "Jake Bennett": "Tulsa Time — Don Williams",
+      "Jake Rogers": "Rodeo — Garth Brooks Tribute",
+      "Jarren Duran": "Pound Cake / Paris Morton Music 2 — Drake · JAY-Z",
+      "Johan Oviedo": "Amazing — Kanye West · Jeezy",
+      "Jovani Moran": "JOVEN LEYENDA — Myke Towers",
+      "Justin Slaten": "The Chain - 2004 Remaster — Fleetwood Mac",
+      "Kristian Campbell": "Thuggish Ruggish Bone — Bone Thugs-N-Harmony",
+      "Kutter Crawford": "Cut It (feat. Young Dolph) — O.T. Genasis · Young Dolph",
+      "Masataka Yoshida": "Touch The Sky — Kanye West · Lupe Fiasco",
+      "Mickey Gasper": "What's My Name - Album Version (Edited) — DMX",
+      "Nate Eaton": "Blue World — Mac Miller",
+      "Nick Sogard": "It Feels So Good — Sonique",
+      "Patrick Sandoval": "What's the Use? — Mac Miller",
+      "Payton Tolle": "Lonely Is The Night - Remastered 2010 — Billy Squier",
+      "Ranger Suárez": "Mr. Rager — Kid Cudi",
+      "Roman Anthony": "The Spins — Mac Miller · Empire Of The Sun",
+      "Romy Gonzalez": "Sundream — RÜFÜS DU SOL",
+      "Seth Martinez": "Gotta Have It — JAY-Z · Kanye West",
+      "Sonny Gray": "Throwback (feat. Chris Brown) — B.o.B · Chris Brown",
+      "Tanner Houck": "Programs — Mac Miller",
+      "Trevor Story": "Programs — Mac Miller",
+      "Triston Casas": "prada dem (feat. Offset) — Gunna · Offset",
+      "Tsung-Che Cheng": "Fast Car — Luke Combs",
+      "Willson Contreras": "SONRÍELE — Daddy Yankee",
+      "Wilyer Abreu": "Sentir Zuliano — Cardenales Del Exito",
+      "Zack Kelly": "DEVIL — Shinedown",
+      // Chicago Cubs
+      "Aaron Civale": "Black Betty — Ram Jam",
+      "Alex Bregman": "Revival — Zach Bryan",
+      "Ben Brown": "Starlight — Jon Pardi",
+      "Braxton Garrett": "Pork And Beans — Weezer",
+      "Cade Horton": "White Iverson — Post Malone",
+      "Caleb Thielbar": "Wake Up — Rage Against The Machine",
+      "Carson Kelly": "Take Me Home Tonight — Eddie Money",
+      "Clay Holmes": "White Horse — Chris Stapleton",
+      "Colin Rea": "red (feat. Morgan Wallen) — HARDY · Morgan Wallen",
+      "Daniel Palencia": "Gasolina — Daddy Yankee",
+      "Dansby Swanson": "Shabang — Drake",
+      "David Peterson": "Simple Man — Lynyrd Skynyrd",
+      "Edward Cabrera": "Tengo Mas — El Philippe",
+      "Ethan Roberts": "Shine (feat. Marcus Stroman) — mike. · Marcus Stroman",
+      "Gavin Hollowell": "Devil Eyes — Hippie Sabotage",
+      "Hoby Milner": "Barbie Girl — Aqua",
+      "Hunter Harvey": "Real American — Rick Derringer",
+      "Ian Happ": "Spectrum (Say My Name) — Xd",
+      "Jacob Webb": "Have a Drink on Me — AC/DC",
+      "Javier Assad": "Gracias - En Vivo — Grupo Firme · Grupo Codiciado",
+      "Jordan Wicks": "Wolves Cry — Bryan Martin",
+      "Justin Dean": "Life We Live (feat. Namond Lumpkin & Edgar Fletcher) — Project Pat · Namond Lumpkin · Edgar Fletcher",
+      "Justin Steele": "God's Gonna Cut You Down — Johnny Cash",
+      "Kevin Alcántara": "Opr — Gesaffelstein",
+      "Kevin Gausman": "Money - 2023 Remaster — Pink Floyd",
+      "Matt Shaw": "LIFT MY HANDS — Forrest Frank",
+      "Matthew Boyd": "Voodoo Child (Slight Return) — Jimi Hendrix",
+      "Michael Busch": "If I Can't - Album Version (Edited) — 50 Cent",
+      "Michael Conforto": "Blink Twice — Shaboozey · Myles Smith",
+      "Miguel Amaya": "Panama - 2015 Remaster — Van Halen",
+      "Nico Hoerner": "whoa (mind in awe) — XXXTENTACION",
+      "Phil Maton": "Under Pressure — Logic",
+      "Porter Hodge": "Above The Clouds — Gang Starr · Inspectah Deck",
+      "Ryan Zeferjahn": "Welcome to the Show — Cody Johnson",
+      "Seiya Suzuki": "My Way - 2008 Remastered — Frank Sinatra",
+      "Shelby Miller": "Just Like Johnny — Redferrin",
+      "Shota Imanaga": "Chelsea Dagger — The Fratellis",
+      "Trent Thornton": "Lunatic Fringe — Red Rider",
+      "Tyler Ferguson": "Heavy Eyes — Zach Bryan",
+      "Tyrone Taylor": "Like Whaaat (feat. Wiz Khalifa, Tyga, Chris Brown & Master P) - Remix — JasonMartin · Wiz Khalifa · Tyga · Chris Brown · Master P"
     };
+
+    /* ===================================================================
+     * Rosters and walk-up songs you can edit
+     * -------------------------------------------------------------------
+     * The list above ships with the app, and it starts going out of date
+     * the moment anyone is traded or picks a new track. This lets you fix
+     * it yourself — change a song, add a player, add a whole team.
+     *
+     * Your changes are merged straight into SONGS as the page loads, so
+     * everywhere that already looked up SONGS[name] — the lineup, the
+     * batter line, the pitcher line — picks them up with nothing else
+     * needing to change.
+     *
+     * Which team a player was on had only ever been written in comments,
+     * which the app can't read. TEAM_ROSTER below is that same grouping
+     * turned into real data, so the editor has something to sort by.
+     * =================================================================== */
+    /* team -> the players on it. The NAME is the key to everything: it's
+       what SONGS is looked up by and what the live feed matches against, so
+       a name spelled two ways becomes two players. "Additional players" and
+       "Unsorted" are the catch-alls for anyone whose team wasn't written
+       down — move them out from the Rosters screen whenever you spot one. */
+    const TEAM_ROSTER = {
+      "Additional players": ["Brennan Bernardino", "Willi Castro", "Tyler Freeman", "Edouard Julien", "Michael Lorenzen", "Jake McCarthy", "Jordan Romano", "Christian Yelich", "Jacob Wilson"],
+      "Arizona Diamondbacks": ["Nolan Arenado", "Jorge Barrosa", "Corbin Carroll", "Taylor Clarke", "Zac Gallen", "Kevin Ginkel", "Merrill Kelly", "Ketel Marte", "James McCann", "Gabriel Moreno", "Geraldo Perdomo", "Brandon Pfaadt", "Eduardo Rodriguez", "Paul Sewald", "Tim Tawa", "Ryan Thompson", "Ildemaro Vargas", "A.J. Puk", "Adrian Del Castillo", "Andrew Hoffmann", "Andrew Saalfrank", "Blake Walston", "Brandyn Garcia", "Corbin Burnes", "Cristian Mena", "Drey Jameson", "Dylan Ray", "Gerardo Carrillo", "Jonathan Loáisiga", "Jordan Lawlar", "Jose Cabrera", "Jose Fernandez", "Juan Burgos", "Juan Morillo", "Justin Martinez", "Kade Strowd", "Kohl Drake", "Lars Nootbaar", "Lourdes Gurriel Jr.", "LuJames Groover", "Max Kepler", "Michael Soroka", "Mitch Bratt", "Philip Abner", "Ryan Waldschmidt", "Ryne Nelson", "Tommy Troy", "Tyler Locklear"],
+      "Athletics": ["Lawrence Butler", "Aaron Civale", "Jonah Heim", "Shea Langeliers", "Mark Leiter Jr.", "Jacob Lopez", "Jeff McNeil", "Joey Meneses", "Tyler Soderstrom", "Jeffrey Springs", "Alika Williams", "Braden Nett", "Brent Rooker", "Brian Serven", "Brooks Kriske", "Darell Hernaiz", "Denzel Clarke", "Gunnar Hoglund", "Hayden Juenger", "Henry Baez", "Joey Estes", "Joshua Kuroda Grauer", "Justin Sterner", "Kade Morris", "Luis Morales", "Luis Severino", "Mason Barnett", "Nick Kurtz", "Scott Blewett", "Tommy White", "Yunior Tur", "Zack Gelof"],
+      "Atlanta Braves": ["Ozzie Albies", "Joey Bart", "Dylan Dodd", "Mauricio Dubón", "Bryce Elder", "Kyle Farmer", "Michael Harris II", "Brewer Hicklen", "Grant Holmes", "Raisel Iglesias", "Dylan Lee", "Reynaldo López", "Jorge Mateo", "Matt Olson", "Austin Riley", "Chris Sale", "Dominic Smith", "Eli White", "Danny Young", "Ha-Seong Kim", "Sean Murphy", "Ronald Acuña Jr.", "Mike Yastrzemski", "Nacho Alvarez Jr.", "Drake Baldwin", "AJ Smith-Shawver", "Martín Pérez", "Joey Wentz", "Tyler Kinley", "Spencer Schwellenbach", "JR Ritchie", "Anthony Molina", "Hurston Waldrep", "Connor Thomas", "Jim Jarvis", "Robert Suarez", "Joe Jiménez", "Spencer Strider", "DaShawn Keirsey Jr.", "James Karinchak", "Duncan Davitt", "Hayden Harris", "Owen Murphy", "Rolddy Munoz", "Tyler Uberstine"],
+      "Baltimore Orioles": ["Samuel Basallo", "Shane Baz", "Dylan Beavers", "Kyle Bradish", "Yennier Cano", "Rico Garcia", "Gunnar Henderson", "Jackson Holliday", "Jeremiah Jackson", "Andrew Kittredge", "Coby Mayo", "Anthony Nunez", "Tyler O'Neill", "Trevor Rogers", "Albert Suárez", "Leody Taveras", "Taylor Ward", "Tyler Wells", "Grant Wolfram", "Brandon Young", "Alex Hoppe", "Blaze Alexander", "Cade Povich", "Cam Sanders", "Cameron Foster", "Cameron Weston", "Carlos Narváez", "Chris Bassitt", "Christian Encarnacion-Strand", "Christian Franklin", "Codi Heuer", "Colin Selby", "Colton Cowser", "Félix Bautista", "Heston Kjerstad", "Jordan Westburg", "Josh Walker", "Keegan Akin", "Nick Raquet", "Pete Alonso", "Rece Hinds", "Reed Trimble", "Ryan Helsley", "Ryan Mountcastle", "Trey Gibson", "Yaramil Hiraldo", "Yohel Pozo", "Yosver Zulueta", "Zach Eflin"],
+      "Boston Red Sox": ["Wilyer Abreu", "Aroldis Chapman", "Danny Coulombe", "Jarren Duran", "Caleb Durbin", "Sonny Gray", "Andruw Monasterio", "Jovani Morán", "Carlos Narváez", "Ceddanne Rafaela", "Anthony Seigler", "Justin Slaten", "Payton Tolle", "Ryan Watson", "Greg Weissert", "Garrett Whitlock", "Connor Wong", "Masataka Yoshida", "Adley Rutschman", "Alec Gamboa", "Brayan Bello", "Brett Harris", "Curtis Mead", "Eduardo Rivera", "Eli White", "Erik Miller", "Garrett Crochet", "Isiah KinerFalefa", "Jahmai Jones", "Jake Bennett", "Jake Rogers", "Johan Oviedo", "Jovani Moran", "Kristian Campbell", "Kutter Crawford", "Mickey Gasper", "Nate Eaton", "Nick Sogard", "Patrick Sandoval", "Ranger Suárez", "Raymond Burgos", "Roman Anthony", "Romy Gonzalez", "Seth Martinez", "Tanner Houck", "Tayron Guerrero", "Trevor Story", "Triston Casas", "Tsung-Che Cheng", "Tyler Samaniego", "Willson Contreras", "Zack Kelly"],
+      "Chicago Cubs": ["Kevin Alcántara", "Miguel Amaya", "Javier Assad", "Matthew Boyd", "Alex Bregman", "Michael Busch", "Michael Conforto", "Pete Crow-Armstrong", "Ian Happ", "Nico Hoerner", "Gavin Hollowell", "Shota Imanaga", "Carson Kelly", "Phil Maton", "David Peterson", "Colin Rea", "Seiya Suzuki", "Dansby Swanson", "Caleb Thielbar", "Jacob Webb", "Justin Dean", "Matt Shaw", "Cade Horton", "Moisés Ballesteros", "Edward Cabrera", "Ben Brown", "Justin Steele", "Jordan Wicks", "Porter Hodge", "Ethan Roberts", "Hoby Milner", "Luke Little", "Hunter Harvey", "Drew Pomeranz", "Daniel Palencia", "Trent Thornton", "Jameson Taillon", "Tyler Ferguson", "Shelby Miller", "Aaron Civale", "Antoine Kelly", "Braxton Garrett", "Clay Holmes", "James Triantos", "Jayden Murray", "Kevin Gausman", "Pedro Ramirez", "Riley Martin", "Ryan Rolison", "Ryan Zeferjahn", "Tyler Austin", "Tyrone Taylor"],
+      "Chicago White Sox": ["Luisangel Acuña", "Andrew Benintendi", "Erick Fedde", "Randal Grichuk", "Jordan Hicks", "Chris Murphy", "Sean Newcomb", "Miguel Vargas"],
+      "Cincinnati Reds": ["Andrew Abbott", "Tejay Antone", "JJ Bleday", "Brock Burke", "Elly De La Cruz", "Hunter Greene", "Ke'Bryan Hayes", "Pierce Johnson", "Nick Lodolo", "Nathaniel Lowe", "Noelvi Marte", "Sam Moll", "Emilio Pagán", "Brady Singer", "Spencer Steer", "Tyler Stephenson", "Eugenio Suárez", "Jose Trevino", "Edwin Arroyo", "Matt McLain", "Dane Myers", "Graham Ashcraft", "Rhett Lowder", "Chase Burns", "Sal Stewart", "TJ Friedl", "Connor Phillips", "Brandon Williamson", "Blake Dunn", "Chase Petty", "Tony Santillan", "Zach Maxwell"],
+      "Cleveland Guardians": ["Gabriel Arias", "Shawn Armstrong", "Patrick Bailey", "Tanner Bibee", "Joey Cantillo", "Slade Cecconi", "David Fry", "Hunter Gaddis", "Austin Hedges", "Colin Holderman", "Rhys Hoskins", "Kyle Manzardo", "Brayan Rocchio", "Daniel Schneemann", "Cade Smith", "Gavin Williams"],
+      "Detroit Tigers": ["Drew Anderson", "Beau Brieske", "Kerry Carpenter", "Dillon Dingler", "Kyle Finnegan", "Jack Flaherty", "Riley Greene", "Tyler Holton", "Kenley Jansen", "Colt Keith", "Hao-Yu Lee", "Kevin McGonigle", "Zach McKinstry", "Casey Mize", "Keider Montero", "James Outman", "Jake Rogers", "Tarik Skubal", "Spencer Torkelson", "Framber Valdez", "Matt Vierling", "Jacob Waguespack"],
+      "Houston Astros": ["Bryan Abreu", "Nick Allen", "Jose Altuve", "Yordan Alvarez", "Spencer Arrighetti", "AJ Blubaugh", "Hunter Brown", "Zach Dezenzo", "Yainer Diaz", "Josh Hader", "Tatsuya Imai", "Cristian Javier", "Bryan King", "Peter Lambert", "Brice Matthews", "Steven Okert", "Isaac Paredes", "Nate Pearson", "Jeremy Peña", "Cam Smith", "Taylor Trammell", "LaMonte Wade Jr."],
+      "Kansas City Royals": ["Luinder Avila", "Jac Caglianone", "Noah Cameron", "Isaac Collins", "Steven Cruz", "Lucas Erceg", "Carter Jensen", "Alex Lange", "Nick Loftin", "Seth Lugo", "Daniel Lynch IV", "Luke Maile", "Starling Marte", "Michael Massey", "Eli Morgan", "Vinnie Pasquantino", "Salvador Perez", "Josh Rojas", "John Schreiber", "Matt Strahm", "Lane Thomas", "Tyler Tolbert", "Bobby Witt Jr."],
+      "Los Angeles Angels": ["Vaughn Grissom", "Tyler Heineman", "Josh Lowe", "Wade Meckler", "Zach Neto", "Oswald Peraza", "Grayson Rodriguez", "Jose Siri", "Jorge Soler", "Brent Suter", "Mike Trout", "Kirby Yates"],
+      "Los Angeles Dodgers": ["Mookie Betts", "Alex Call", "Tommy Edman", "Freddie Freeman", "Teoscar Hernández", "Landon Knack", "Max Muncy", "Emmet Sheehan", "Kyle Tucker", "Alex Vesia", "Yoshinobu Yamamoto", "Alek Thomas", "Hyeseong Kim", "Enrique Hernández", "Will Smith", "Shohei Ohtani", "Andy Pages", "Ryan Ward", "Dalton Rushing", "Miguel Rojas", "Alex Freeland", "Edwin Díaz", "Blake Snell", "Roki Sasaki", "Bobby Miller", "Tyler Glasnow", "Eric Lauer", "Gavin Stone", "Brock Stewart", "Brusdar Graterol", "Blake Treinen", "Evan Phillips", "Edgardo Henriquez", "Will Klein", "Chayce McDermott", "Kyle Hurt", "Tanner Scott", "Justin Wrobleski", "River Ryan", "Ben Casparius", "Jack Dreyer", "Jake Cousins"],
+      "Miami Marlins": ["Sandy Alcantara", "Griffin Conine", "Xavier Edwards", "Pete Fairbanks", "Ryan Gusto", "Heriberto Hernández", "Liam Hicks", "Leo Jiménez", "Janson Junk", "Otto Lopez", "Eury Pérez", "Tyler Phillips", "Esteury Ruiz", "Javier Sanoja", "Kyle Stowers", "Derek Hill", "Brad Keller", "Tim Mayza"],
+      "Milwaukee Brewers": ["Jake Bauers", "William Contreras", "Sal Frelick", "Garrett Mitchell", "Joey Ortiz", "Cooper Pratt", "Gary Sánchez", "Brice Turang", "Andrew Vaughn", "Robert Gasser", "Jared Koenig", "Trevor Megill", "Jacob Misiorowski", "Chad Patrick", "Abner Uribe", "Bryse Wilson"],
+      "Minnesota Twins": ["Josh Bell", "Taj Bradley", "Victor Caratini", "Kody Clemens", "Kody Funderburk", "Yoendrys Gómez", "Tristan Gray", "Alex Jackson", "Ryan Jeffers", "Luke Keaschall", "Ryan Kreidler", "Trevor Larnach", "Brooks Lee", "Royce Lewis", "Austin Martin", "Zebby Matthews", "Andrew Morris", "Tommy Nance", "Bailey Ober", "Mike Paredes", "Taylor Rogers", "Kendry Rojas", "Joe Ryan"],
+      "New York Mets": ["Francisco Alvarez", "Bo Bichette", "Xzavion Curry", "Sean Manaea", "A.J. Minter", "Tobias Myers", "Freddy Peralta", "Jorge Polanco", "Brooks Raley", "Christian Scott", "Kodai Senga", "Juan Soto", "Tyrone Taylor", "Luis Torrens", "Eric Wagaman", "Devin Williams", "Jared Young"],
+      "New York Yankees": ["David Bednar", "Paul Blackburn", "José Caballero", "Gerrit Cole", "Fernando Cruz", "Camilo Doval", "Paul Goldschmidt", "Trent Grisham", "Amed Rosario", "Max Schuemann", "Anthony Volpe", "Ryan Weathers"],
+      "Pittsburgh Pirates": ["Henry Davis", "Mitch Keller", "Brandon Lowe", "Jake Mangum", "Carmen Mlodzinski", "Mason Montgomery", "Ryan O'Hearn", "Marcell Ozuna", "Bryan Reynolds", "Gregory Soto", "Jared Triolo"],
+      "San Francisco Giants": ["Luis Arraez", "Spencer Bivens", "Bryce Eldridge", "Sam Hentges", "Adrian Houser", "Christian Koss", "Jung Hoo Lee", "Tyler Mahle", "Grant McCray", "Robbie Ray", "Landen Roupp", "Casey Schmitt", "Keaton Winn"],
+      "Seattle Mariners": ["Eduard Bazardo", "Dominic Canzone", "Luis Castillo", "J.P. Crawford", "José A. Ferrer", "Mitch Garver", "Logan Gilbert", "Emerson Hancock", "George Kirby", "Bryce Miller", "Andrés Muñoz", "Josh Naylor", "Cal Raleigh", "Luke Raley", "Victor Robles", "Gabe Speier", "Weston Wilson", "Bryan Woo", "Cole Young"],
+      "St. Louis Cardinals": ["Justin Bruihl", "Alec Burleson", "Nathan Church", "Jimmy Crooks", "José Fermín", "Gordon Graceffo", "Iván Herrera", "Blaze Jordan", "Kyle Leahy", "Matthew Liberatore", "Dustin May", "Michael McGreevy", "Lars Nootbaar", "Riley O'Brien", "Pedro Pagés", "Andre Pallante", "JoJo Romero", "George Soriano", "Ryne Stanek", "Bryan Torres", "Nelson Velázquez", "Jordan Walker", "JJ Wetherholt", "Masyn Winn", "Victor Scott II", "Nolan Gorman", "Thomas Saggese", "Ramón Urías", "César Prieto", "Richard Fitts", "Hunter Dobbins", "Matt Svanson", "Yohel Pozo", "Ryan Fernandez"],
+      "Tampa Bay Rays": ["Jonathan Aranda", "Bryan Baker", "Junior Caminero", "Garrett Cleavinger", "Jonny DeLuca", "Yandy Díaz", "Hunter Feduccia", "Griffin Jax", "Kevin Kelly", "Craig Kimbrel", "Nick Martinez", "Shane McClanahan", "Victor Mesa Jr.", "Cedric Mullins", "Richie Palacios", "Drew Rasmussen", "Chris Roycroft", "Chandler Simpson", "Cole Sulser", "Ryan Vilade", "Taylor Walls", "Ben Williamson"],
+      "Texas Rangers": ["Tyler Alexander", "Jake Burger", "Evan Carter", "Gavin Collyer", "Jacob deGrom", "Elias Díaz", "Ezequiel Duran", "Nathan Eovaldi", "MacKenzie Gore", "Kyle Higashioka", "Josh Jung", "Wyatt Langford", "Jacob Latz", "Chris Martin", "Brandon Nimmo", "Alejandro Osuna", "Joc Pederson", "Cal Quantrill", "Kumar Rocker", "Cole Winn", "Justin Foscue"],
+      "Toronto Blue Jays": ["Vladimir Guerrero Jr.", "George Springer", "Alejandro Kirk", "Daulton Varsho", "Ernie Clement", "Davis Schneider", "Davis Snider", "Xander Bogaerts", "Jackson Merrill", "Jase Bowen", "Ramón Laureano", "Will Wagner", "Jake Cronenworth", "Luis Campusano", "Manny Machado", "Luis Rengifo", "Fernando Tatis Jr.", "Sung Mun Song", "Ty France", "Blake Hunt", "Gavin Sheets", "Michael King", "Miguel Andújar", "Freddy Fermín", "Yuki Matsui", "Walker Buehler", "Griffin Canning", "Mason Miller", "Nick Pivetta", "Germán Márquez", "Alek Jacob", "JP Sears", "Jason Adam", "Joe Musgrove", "Rodolfo Durán", "Adrián Morejón", "Lucas Giolito", "Jeremiah Estrada", "Wandy Peralta", "Matt Waldron", "David Morgan", "Kyle Hart", "Bradgley Rodriguez", "Jhony Brito", "Ron Marinaccio", "Randy Vásquez", "Jonatan Clase", "Kazuma Okamoto", "Luis Urías", "Myles Straw", "Nathan Lukes", "Spencer Miles", "Shane Bieber", "Dylan Cease", "Patrick Corbin", "Braydon Fisher", "Kevin Gausman", "Jeff Hoffman", "Adam Macko", "Tyler Rogers", "Louis Varland", "Trey Yesavage", "Jesús Sánchez", "José Berríos", "Sean Keys", "Yohendrick Pinango", "Anthony Santander", "Charles McAdoo", "Jake Bloss", "Max Scherzer", "Joe Mantiply", "Andrés Giménez", "Bowden Francis", "Addison Barger", "Lenyn Sosa", "Chase Lee", "Brendon Little", "Brandon Valenzuela", "Lazaro Estrada", "Cody Ponce", "Mason Fluharty", "Louie Varland", "Yimi García", "Willie MacIver"],
+      "Unsorted": ["Aaron Judge", "Adam Frazier", "Alan Roden", "Austin Wells", "Christian Vázquez", "Christian Walker", "Francisco Lindor", "Justin Turner", "Nick Fortes"],
+      "Washington Nationals": ["CJ Abrams", "Andrés Chaparro", "Tom Cosgrove", "Dylan Crews", "Luis García Jr.", "Justin Lawrence", "Zack Littell", "Curtis Mead", "Miles Mikolas", "Nasim Nuñez", "Orlando Ribalta", "Keibert Ruiz", "José Tena", "James Wood", "Jacob Young"],
+      "Philadelphia Phillies": ["Garrett Stubbs"],
+      "No active team": ["Matt Reynolds"],
+    };
+
+    const ROSTER_KEY = "alb.roster.v1";
+    let ROSTER = { songs: {}, teams: {}, removed: [] };
+    try { Object.assign(ROSTER, JSON.parse(localStorage.getItem(ROSTER_KEY)) || {}); } catch (e) { }
+    function rosterSave() { try { localStorage.setItem(ROSTER_KEY, JSON.stringify(ROSTER)); } catch (e) { } }
+
+    /* Your edits win over what shipped, and anything you removed goes. */
+    function rosterApply() {
+      Object.assign(SONGS, ROSTER.songs);
+      for (const n of (ROSTER.removed || [])) delete SONGS[n];
+    }
+    rosterApply();
+
+    /* The built-in teams with your additions folded in. Built from scratch
+       each time rather than kept around, so it can never drift from what
+       you've actually saved. */
+    function rosterTeams() {
+      const out = {};
+      for (const t in TEAM_ROSTER) out[t] = TEAM_ROSTER[t].slice();
+      for (const t in (ROSTER.teams || {})) {
+        if (!out[t]) out[t] = [];
+        for (const n of ROSTER.teams[t]) if (out[t].indexOf(n) < 0) out[t].push(n);
+      }
+      const gone = ROSTER.removed || [];
+      for (const t in out) out[t] = out[t].filter(function (n) { return gone.indexOf(n) < 0; });
+      return out;
+    }
+
+    let rosterOpenTeam = null;      // which team is expanded
+    let rosterFilter = "";
+
+    function rosterShow(on) {
+      const box = document.getElementById("rosterBox");
+      if (!box) return;
+      box.style.display = on ? "flex" : "none";
+      if (on) rosterRender();
+    }
+
+    function rosterRender() {
+      const teams = rosterTeams();
+      const wrap = document.getElementById("rosterList");
+      const q = rosterFilter.trim().toLowerCase();
+      wrap.innerHTML = "";
+
+      /* Searching looks straight through every player on every team, so you
+         don't have to know who someone plays for to fix their song. */
+      if (q) {
+        const hits = [];
+        for (const t in teams) for (const n of teams[t]) {
+          if (n.toLowerCase().indexOf(q) >= 0) hits.push([t, n]);
+        }
+        document.getElementById("rosterCount").textContent =
+          hits.length + (hits.length === 1 ? " player" : " players") + " matching";
+        hits.sort(function (a, b) { return a[1].localeCompare(b[1]); });   // A to Z
+        hits.slice(0, 200).forEach(function (h) { wrap.appendChild(rosterRow(h[1], h[0])); });
+        if (!hits.length) wrap.innerHTML = '<div class="rEmpty">Nobody by that name. You can add them below.</div>';
+        return;
+      }
+
+      let total = 0;
+      for (const t in teams) total += teams[t].length;
+      document.getElementById("rosterCount").textContent =
+        total + " players across " + Object.keys(teams).length + " teams";
+
+      Object.keys(teams).sort().forEach(function (t) {
+        const head = document.createElement("button");
+        head.className = "rTeam" + (rosterOpenTeam === t ? " open" : "");
+        head.innerHTML = '<span class="rName"></span><span class="rNum"></span>';
+        head.querySelector(".rName").textContent = t;
+        head.querySelector(".rNum").textContent = teams[t].length;
+        head.onclick = function () {
+          rosterOpenTeam = (rosterOpenTeam === t) ? null : t;   // tap again to close
+          rosterRender();
+        };
+        wrap.appendChild(head);
+
+        if (rosterOpenTeam === t) {
+          // A to Z by first name, rather than the order they happened to be
+          // added in — a roster you have to hunt through isn't much use.
+          teams[t].slice().sort(function (a, b) { return a.localeCompare(b); })
+            .forEach(function (n) { wrap.appendChild(rosterRow(n, null)); });
+          const add = document.createElement("button");
+          add.className = "rAdd";
+          add.textContent = "+ Add a player to " + t;
+          add.onclick = function () { rosterAddPlayer(t); };
+          wrap.appendChild(add);
+        }
+      });
+    }
+
+    /* One player: their name, and a box holding their song. */
+    function rosterRow(name, teamLabel) {
+      const row = document.createElement("div");
+      row.className = "rRow";
+      row.innerHTML =
+        '<span class="rWho"></span>' +
+        '<input class="rSong" placeholder="Walk-up song — e.g. Thunderstruck — AC/DC">' +
+        '<button class="rDel" title="Remove">✕</button>';
+      row.querySelector(".rWho").textContent = teamLabel ? name + "  ·  " + teamLabel : name;
+
+      const input = row.querySelector(".rSong");
+      input.value = SONGS[name] || "";
+      /* Saved as you type. There's no Save button on purpose — a roster you
+         have to remember to save is a roster that loses your edits. */
+      input.oninput = function () {
+        const v = input.value.trim();
+        if (v) { ROSTER.songs[name] = v; SONGS[name] = v; }
+        else { delete ROSTER.songs[name]; delete SONGS[name]; }
+        rosterSave();
+      };
+
+      row.querySelector(".rDel").onclick = function () {
+        if (!confirm("Remove " + name + "?")) return;
+        if (!ROSTER.removed) ROSTER.removed = [];
+        if (ROSTER.removed.indexOf(name) < 0) ROSTER.removed.push(name);
+        delete ROSTER.songs[name];
+        delete SONGS[name];
+        rosterSave();
+        rosterRender();
+      };
+      return row;
+    }
+
+    function rosterAddPlayer(team) {
+      const name = prompt("Player's name:");
+      if (!name || !name.trim()) return;
+      const n = name.trim();
+      if (!ROSTER.teams[team]) ROSTER.teams[team] = [];
+      if (ROSTER.teams[team].indexOf(n) < 0) ROSTER.teams[team].push(n);
+      // Adding somebody back undoes an earlier removal.
+      ROSTER.removed = (ROSTER.removed || []).filter(function (x) { return x !== n; });
+      const song = prompt("Their walk-up song? (leave blank for now)");
+      if (song && song.trim()) { ROSTER.songs[n] = song.trim(); SONGS[n] = song.trim(); }
+      rosterSave();
+      rosterOpenTeam = team;
+      rosterRender();
+    }
+
     // original per-player walk-up riffs for every active Blue Jays hitter — seq is [semitone, beats] (null = rest)
     const WALKUP = {
       "George Springer": { base: 196, wave: "square", seq: [[7, 1], [7, 1], [9, 1], [7, 1], [12, 2], [9, 1], [7, 1], [4, 1], [0, 2]] },
@@ -5818,7 +6275,53 @@
         if (e.target.id === "quizNext") { quizState.i++; quizState.picked = null; renderQuiz(); }
       });
     })();
+  
+    /* Wiring for the roster editor. Kept with the other button handlers so
+       it's switched on the same way everything else on this bar is. */
+    (function () {
+      const open = document.getElementById("rosterBtn");
+      if (open) open.onclick = function () { rosterShow(true); };
+      const close = document.getElementById("rosterClose");
+      if (close) close.onclick = function () { rosterShow(false); };
+      const box = document.getElementById("rosterBox");
+      // Clicking the dimmed area outside the card closes it too.
+      if (box) box.onclick = function (e) { if (e.target === box) rosterShow(false); };
+      const search = document.getElementById("rosterSearch");
+      if (search) search.oninput = function () { rosterFilter = search.value; rosterRender(); };
+      const addTeam = document.getElementById("rosterAddTeam");
+      if (addTeam) addTeam.onclick = function () {
+        const t = prompt("Team name:");
+        if (!t || !t.trim()) return;
+        const name = t.trim();
+        if (!ROSTER.teams[name]) ROSTER.teams[name] = [];
+        rosterSave();
+        rosterOpenTeam = name;      // drop straight into the new team
+        rosterFilter = "";
+        if (search) search.value = "";
+        rosterRender();
+      };
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") rosterShow(false);
+      });
+    })();
   </script>
+
+<!-- Rosters and walk-up songs, editable. Sits over the game rather than
+     replacing it, so nothing is interrupted while you tidy the list up. -->
+<div id="rosterBox">
+  <div class="rCard">
+    <div class="rHead">
+      <b>📝 Rosters &amp; walk-up songs</b>
+      <span class="rNum2" id="rosterCount"></span>
+      <button class="btn" id="rosterClose">Done</button>
+    </div>
+    <div class="rTools">
+      <input id="rosterSearch" placeholder="Search any player…" autocomplete="off">
+      <button class="btn" id="rosterAddTeam">+ Add a team</button>
+    </div>
+    <div id="rosterList"></div>
+  </div>
+</div>
 </body>
 
 </html>
