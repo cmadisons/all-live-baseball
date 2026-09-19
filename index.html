@@ -4844,7 +4844,9 @@
       const prem = isPremium();              // 💎 Premium: a ▶ video button on every pitch / hit / play
       for (let i = shown.length - 1; i >= 0; i--) {
         const p = shown[i];
-        if (condensed && ["⚪", "❌", "↩️"].includes(p.ic)) continue;
+        // Condensed hides the pitch-by-pitch, but never the newest row: a feed
+        // whose top line was three pitches behind the field read as broken.
+        if (condensed && i !== shown.length - 1 && ["⚪", "❌", "↩️"].includes(p.ic)) continue;
         const fresh = (i >= prev) ? " fresh" : "";   // animate only newly revealed rows
         const sel = (i === viewIndex) ? " sel" : "";
         html.push(`<div class="play ${p.cls || ""}${fresh}${sel}" data-i="${i}"><span class="ic">${p.ic}</span><span class="ptxt">${p.html}</span>${prem && p.pid ? `<button class="vid" data-i="${i}" title="Watch the video of this ${p.isPlay ? "play" : "pitch"}">▶</button>` : ""}<button class="rew" data-i="${i}" title="Rewind here & play from this pitch">⟲</button></div>`);
@@ -5331,8 +5333,8 @@
       { lvl: 260, emoji: "🎶", name: "Pick Varsho's walk-up song", desc: "Choose Daulton Varsho's walk-up song: “Ordinary — Alex Warren” or “I Run To Your Light.”", live: true },
       { lvl: 270, emoji: "📋", name: "Just the big plays", desc: "Condense the feed to only hits, walks and strikeouts — hide the pitch-by-pitch balls, strikes & fouls.", live: true },
       { lvl: 280, emoji: "🧠", name: "Harder quizzes", desc: "The quizzes get tougher from here on — the Level 305 and 405 quizzes switch to a harder set of questions. Switch it off any time to go back to the easier ones.", live: true },
-      { lvl: 290, emoji: "🔔", name: "Favorite team live alerts", desc: "Get a pop-up the moment your favorite team's game goes live — even when you're on another tab.", live: true },
-      { lvl: 300, emoji: "🏆", name: "Live score in the tab", desc: "Your favorite team's live score shows in the browser-tab title, so you can peek from another tab.", live: true },
+      { lvl: 290, emoji: "🔔", name: "Favorite team live alerts", desc: "Get a pop-up the moment your favorite team's game goes live — even when you're on another tab. Note: this only works while this page is still open somewhere — close the tab and the alerts stop.", live: true },
+      { lvl: 300, emoji: "🏆", name: "Live score in the tab", desc: "Your favorite team's live score shows in the browser-tab title, so you can peek from another tab. Note: this only works while this page is still open — it is the tab's own title, so closing the tab ends it.", live: true },
       { lvl: 310, emoji: "🧱", name: "Lego Playoffs", desc: "The whole field goes Lego: minifigure players, a 2×2 brick ball, a brick bat, and red-brick bases.", live: true },
       { lvl: 320, emoji: "🚀", name: "Star Wars Mode (×2 levels)", desc: "The bat is a lightsaber — blue for your team, red for the other — and the ball is a bullet. Also earns ×2 levels.", live: true },
       { lvl: 330, emoji: "😎", name: "Cool Mode (×3 levels)", desc: "Home run = explosion + smoke + “ooh” · triple = smoke + “ooh” · double = “ooh” · caught = “boo.” Also earns ×3 levels.", live: true },
@@ -6080,9 +6082,20 @@
     async function loadPlayoffPicker() {
       const sel = document.getElementById("poPick"); if (!sel) return;
       try {
-        const year = new Date().getFullYear() - 1;   // last completed postseason
-        const d = await (await fetch(`${API}/api/v1/schedule?sportId=1&season=${year}&gameType=P`)).json();
-        poGames = []; (d.dates || []).forEach(dd => (dd.games || []).forEach(g => poGames.push(g)));
+        // Try this year's postseason first and fall back to last year's. Asking
+        // only for getFullYear()-1 meant that from the moment the World Series
+        // ended until New Year's Day the picker offered the PREVIOUS year's
+        // playoffs while the ones everybody had just watched were missing.
+        const thisYear = new Date().getFullYear();
+        poGames = [];
+        for (const year of [thisYear, thisYear - 1]) {
+          const d = await (await fetch(`${API}/api/v1/schedule?sportId=1&season=${year}&gameType=P`)).json();
+          (d.dates || []).forEach(dd => (dd.games || []).forEach(g => poGames.push(g)));
+          // Only take a season that actually finished — a postseason that has
+          // been scheduled but not played is a list of games you cannot watch.
+          poGames = poGames.filter(g => (g.status && g.status.abstractGameState) === "Final");
+          if (poGames.length) break;
+        }
         if (!poGames.length) { sel.innerHTML = '<option value="">No playoff games found</option>'; return; }
         sel.innerHTML = poGames.map((g, i) => {
           const aw = g.teams.away, hm = g.teams.home, dt = (g.gameDate || "").slice(0, 10);
@@ -6335,7 +6348,7 @@
   </script>
   <script>
     /* ===== Baseball quiz — at Lv 5/105/205/305/405: 5 Qs, +5 each right, +5 bonus at 3-4, 50 total for a perfect 5 ===== */
-    const QUIZ_LEVELS = [5, 105, 205, 305, 405];
+    const QUIZ_LEVELS = [5, 105, 205, 305, 355, 405];
     const QUIZZES = {
       5: [
         { q: "How many strikes make a strikeout?", a: ["2", "3", "4", "5"], c: 1 },
@@ -6371,10 +6384,24 @@
         { q: "How many feet between the bases?", a: ["60", "90", "100", "120"], c: 1 },
         { q: "In a perfect game, no batter…", a: ["Scores", "Reaches base", "Hits a homer", "Strikes out"], c: 1 },
         { q: "The designated hitter (DH) bats in place of the…", a: ["Pitcher", "Catcher", "Shortstop", "Manager"], c: 0 }
+      ],
+      355: [
+        { q: "How many players from one team are on the field at once?", a: ["8", "9", "10", "11"], c: 1 },
+        { q: "What is it called when the batter is hit by the pitch?", a: ["A walk", "Hit by pitch", "A balk", "An error"], c: 1 },
+        { q: "Which base is closest to the right fielder?", a: ["First", "Second", "Third", "Home"], c: 0 },
+        { q: "How many innings are in a regular game?", a: ["7", "8", "9", "10"], c: 2 },
+        { q: "What do you call three outs made on one play?", a: ["A hat trick", "A triple play", "A grand slam", "A shutout"], c: 1 }
       ]
     };
     /* Lv280: from Lv305 on, the quizzes switch to a tougher set of questions. */
     const QUIZZES_HARD = {
+      355: [
+        { q: "With runners on first and second and one out, a line drive is caught. The runners must…", a: ["Keep running", "Tag up before advancing", "Return and stay", "Swap bases"], c: 1 },
+        { q: "A balk is called against the…", a: ["Batter", "Pitcher", "Catcher", "Runner"], c: 1 },
+        { q: "The infield fly rule protects the…", a: ["Fielding team", "Runners", "Pitcher", "Umpire"], c: 1 },
+        { q: "What does OPS add together?", a: ["Outs and putouts", "On-base and slugging", "Overall pitching speed", "Opponent strikeouts"], c: 1 },
+        { q: "A pitcher who finishes a close game his team wins earns a…", a: ["Hold", "Save", "Win", "Quality start"], c: 1 }
+      ],
       305: [
         { q: "If a batted ball hits the foul pole, it's…", a: ["Foul", "A home run", "A dead ball", "A do-over"], c: 1 },
         { q: "The infield fly rule can only be called with…", a: ["Two outs", "Runners on 1st and 2nd and fewer than two outs", "The bases empty", "A full count"], c: 1 },
