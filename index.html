@@ -1451,6 +1451,62 @@
       opacity: .6
     }
 
+    .play .vid {
+      flex: 0 0 auto;
+      align-self: center;
+      background: var(--accent);
+      color: #0a1f14;
+      border: none;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+      opacity: .85
+    }
+
+    .play .vid:hover {
+      opacity: 1
+    }
+
+    .vidhint {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--dim);
+      padding: 5px 16px 0
+    }
+
+    .vidbox {
+      max-width: 820px;
+      margin-top: 4vh
+    }
+
+    #vidBody {
+      padding: 12px;
+      text-align: center
+    }
+
+    #vidBody video {
+      width: 100%;
+      max-height: 70vh;
+      background: #000;
+      border-radius: 10px;
+      display: block
+    }
+
+    #vidBody .vidcap {
+      font-size: 13px;
+      color: var(--dim);
+      margin-top: 8px;
+      text-align: left
+    }
+
+    #vidBody .vidmsg {
+      padding: 36px 12px;
+      font-size: 15px;
+      line-height: 1.5
+    }
+
     .play .rew:hover {
       background: var(--accent);
       color: #0a1f14;
@@ -2037,6 +2093,19 @@
     <div class="sub" id="sub">Loading today's slate…</div>
   </header>
 
+  <div id="vidOverlay" class="overlay">
+    <div class="statsbox vidbox">
+      <div class="statshead">
+        <span id="vidTitle">▶ Video</span>
+        <span style="display:flex;gap:8px">
+          <button class="btn" id="vidAlt" style="display:none"></button>
+          <button class="btn" id="vidClose">✕ Close</button>
+        </span>
+      </div>
+      <div id="vidBody"></div>
+    </div>
+  </div>
+
   <div id="statsOverlay" class="overlay">
     <div class="statsbox">
       <div class="statshead">
@@ -2393,6 +2462,7 @@
             <button class="btn" id="rosterBtn" title="Rosters &amp; walk-up songs">📝 Rosters</button>
           </div>
         </div>
+        <div class="vidhint" id="vidHint">💎 Premium: video of every pitch</div>
         <div class="feed" id="feed">
           <div class="empty">Select a game above.</div>
         </div>
@@ -2804,7 +2874,7 @@
               if (/pitch timer violation/i.test(pd) && /pitcher/i.test(pd)) left = 0;   // pitcher ran out of time
               const cnt = ` <span class="cnt">${c.balls || 0}-${c.strikes || 0}</span>`;   // show the count
               T.push({
-                ts, cls: ln.cls, ic: ln.ic, html: ln.html + pitchExtra(e) + cnt, left,
+                ts, cls: ln.cls, ic: ln.ic, html: ln.html + pitchExtra(e) + cnt, left, pid: e.playId,
                 board: mkBoard({ inning, half, batter, pitcher, balls: c.balls || 0, strikes: c.strikes || 0, outs: c.outs || 0, bases: prevBases })
               });
             }
@@ -2823,7 +2893,7 @@
             if (/challenge|review|overturn|upheld|replay/i.test(dsc)) aic = "👎";
             else if (/mound visit/i.test(dsc)) aic = "🕴️";
             T.push({
-              ts, cls: "inj", ic: aic, html: esc(dsc),
+              ts, cls: "inj", ic: aic, html: esc(dsc), pid: e.playId,
               board: mkBoard({ inning, half, batter, pitcher, balls: c.balls || 0, strikes: c.strikes || 0, outs: c.outs || 0, bases: prevBases })
             });
           }
@@ -2837,7 +2907,7 @@
           const left = pitchLeftFrom(lastPitchTs, ts, runnersOn);   // the pitch that ended the at-bat
           const contactPitch = (p.playEvents || []).filter(ev => ev.isPitch).pop();   // its speed
           T.push({
-            ts, cls: evClass(res.event), ic: evIcon(res.event), left,
+            ts, cls: evClass(res.event), ic: evIcon(res.event), left, pid: contactPitch && contactPitch.playId, isPlay: true,
             html: `<span class="res">${esc(res.event)}</span> — ${esc(res.description || "")}${contactPitch ? pitchExtra(contactPitch) : ""}`,
             board: mkBoard({ inning, half, batter, pitcher, balls: 0, strikes: 0, outs: outsAfter, bases: basesAfter })
           });
@@ -4771,12 +4841,13 @@
       const oldH = feedEl.scrollHeight, oldTop = feedEl.scrollTop;
       const html = [];
       const condensed = rewardActive(270);   // Lv270: only the big plays — hide pitch-by-pitch balls, strikes & fouls
+      const prem = isPremium();              // 💎 Premium: a ▶ video button on every pitch / hit / play
       for (let i = shown.length - 1; i >= 0; i--) {
         const p = shown[i];
         if (condensed && ["⚪", "❌", "↩️"].includes(p.ic)) continue;
         const fresh = (i >= prev) ? " fresh" : "";   // animate only newly revealed rows
         const sel = (i === viewIndex) ? " sel" : "";
-        html.push(`<div class="play ${p.cls || ""}${fresh}${sel}" data-i="${i}"><span class="ic">${p.ic}</span><span class="ptxt">${p.html}</span><button class="rew" data-i="${i}" title="Rewind here & play from this pitch">⟲</button></div>`);
+        html.push(`<div class="play ${p.cls || ""}${fresh}${sel}" data-i="${i}"><span class="ic">${p.ic}</span><span class="ptxt">${p.html}</span>${prem && p.pid ? `<button class="vid" data-i="${i}" title="Watch the video of this ${p.isPlay ? "play" : "pitch"}">▶</button>` : ""}<button class="rew" data-i="${i}" title="Rewind here & play from this pitch">⟲</button></div>`);
       }
       feedEl.innerHTML = html.join("");
       // new plays are prepended; keep the user's reading position unless they're at the top
@@ -4792,6 +4863,8 @@
 
     // click a play to rewind the whole field to that moment; click the newest play (or ⏭ Live) to resume
     feedEl.addEventListener("click", e => {
+      const vb = e.target.closest(".vid");
+      if (vb) { e.stopPropagation(); openPlayVideo(+vb.dataset.i); return; }   // 💎 ▶ button → video overlay
       const btn = e.target.closest(".rew");
       if (btn) { e.stopPropagation(); seekToPlay(+btn.dataset.i); return; }   // ⟲ button → rewind + play
       const row = e.target.closest(".play"); if (!row) return;
@@ -4801,6 +4874,99 @@
       tick();
     });
     document.getElementById("live").onclick = function () { viewIndex = null; lastViewRendered = -1; feedDirty = true; tick(); };
+
+    /* ---------------- 💎 Premium: video of every pitch, hit & play ---------------- */
+    // shared arcade contract: Premium is on while squarebox:premiumUntil is in the future
+    function isPremium(){ try { return +localStorage.getItem('squarebox:premiumUntil') > Date.now(); } catch(e){ return false; } }
+    // Every pitch in the MLB feed has a playId. Baseball Savant hosts that pitch's clip (sporty-clips mp4) and
+    // allows cross-origin reads, so we pull the mp4 out of its page and play it here. At-bat results also check
+    // MLB's broadcast highlights for the same playId (a nicer clip with replays) and fall back to Savant.
+    const vidFound = {};                   // "src:playId" → mp4 url (only hits are kept, so "not ready yet" can retry)
+    const hlCache = {};                    // gamePk → { at, map: playId → { url, title } }
+    async function highlightClip(pk, pid) {
+      let h = hlCache[pk];
+      if (!h || (!h.map[pid] && Date.now() - h.at > 60000)) {   // refresh at most once a minute
+        try {
+          const d = await (await fetch(`https://statsapi.mlb.com/api/v1/game/${pk}/content`)).json();
+          const map = {};
+          for (const it of (((d.highlights || {}).highlights || {}).items || [])) {
+            const pb = (it.playbacks || []).find(x => x.name === "mp4Avc") || (it.playbacks || []).find(x => /\.mp4$/i.test(x.url || ""));
+            if (it.guid && pb) map[it.guid] = { url: pb.url, title: it.headline || it.title || "" };
+          }
+          h = hlCache[pk] = { at: Date.now(), map };
+        } catch (e) { if (!h) return null; }
+      }
+      return h.map[pid] || null;
+    }
+    async function savantClip(pid) {
+      if (vidFound["sv:" + pid]) return vidFound["sv:" + pid];
+      const html = await (await fetch(`https://baseballsavant.mlb.com/sporty-videos?playId=${encodeURIComponent(pid)}`)).text();
+      const m = html.match(/<source[^>]*src="(https:\/\/[^"]+\.mp4)"/i) || html.match(/(https:\/\/sporty-clips\.mlb\.com\/[^"'\s<>]+\.mp4)/i);
+      return m ? (vidFound["sv:" + pid] = m[1]) : null;
+    }
+    let vidToken = 0, vidAltClip = null;
+    function vidShow(url, cap, alt) {
+      const body = document.getElementById("vidBody"), ab = document.getElementById("vidAlt");
+      body.innerHTML = `<video controls autoplay playsinline preload="auto"></video><div class="vidcap">${cap}</div>`;
+      const v = body.querySelector("video");
+      v.onerror = () => { body.innerHTML = `<div class="vidmsg">😕 That video wouldn't load.<br><button class="btn" id="vidRetry" style="margin-top:12px">↻ Try again</button></div>`; };
+      v.src = url;
+      const pr = v.play(); if (pr && pr.catch) pr.catch(() => { });   // autoplay may need a tap — controls are there
+      vidAltClip = alt || null;
+      ab.style.display = alt ? "inline-block" : "none";
+      if (alt) ab.textContent = alt.label;
+    }
+    async function openPlayVideo(i) {
+      const fc = feeds[current], p = fc && fc.timeline[i];
+      if (!p || !p.pid || !isPremium()) return;
+      const my = ++vidToken, pk = current;
+      const ov = document.getElementById("vidOverlay"), body = document.getElementById("vidBody");
+      document.getElementById("vidTitle").textContent = p.isPlay ? "▶ Video of the play" : "▶ Video of the pitch";
+      document.getElementById("vidAlt").style.display = "none";
+      const inn = p.board ? `${p.board.half === "top" ? "Top" : "Bot"} ${p.board.inning} · ${esc(p.board.pitcher || "")} to ${esc(p.board.batter || "")}` : "";
+      const cap = `${p.ic} ${p.html}${inn ? `<br>${inn}` : ""}`;
+      body.innerHTML = `<div class="vidmsg">🎬 Finding the video…</div>`;
+      body.dataset.i = i;
+      ov.classList.add("open");
+      let hl = null, sv = null;
+      try {
+        [hl, sv] = await Promise.all([
+          p.isPlay ? highlightClip(pk, p.pid).catch(() => null) : null,
+          savantClip(p.pid).catch(() => null)
+        ]);
+      } catch (e) { }
+      if (my !== vidToken || !ov.classList.contains("open")) return;   // closed or another video was picked
+      if (hl) vidShow(hl.url, `📺 ${esc(hl.title)}<br>${cap}`, sv ? { label: "🎯 Pitch cam", url: sv, cap: `🎯 Pitch cam<br>${cap}`, back: { label: "📺 Broadcast", url: hl.url, cap: `📺 ${esc(hl.title)}<br>${cap}` } } : null);
+      else if (sv) vidShow(sv, cap);
+      else body.innerHTML = `<div class="vidmsg">⏳ This video isn't ready yet.<br><span class="dim">MLB usually posts it a few minutes after the ${p.isPlay ? "play" : "pitch"}.</span><br><button class="btn" id="vidRetry" style="margin-top:12px">↻ Try again</button></div>`;
+    }
+    function closePlayVideo() {
+      vidToken++;
+      const ov = document.getElementById("vidOverlay"), v = ov.querySelector("video");
+      if (v) { v.pause(); v.removeAttribute("src"); v.load(); }
+      document.getElementById("vidBody").innerHTML = "";
+      ov.classList.remove("open");
+    }
+    document.getElementById("vidClose").onclick = closePlayVideo;
+    document.getElementById("vidOverlay").addEventListener("click", e => {
+      if (e.target.id === "vidOverlay") return closePlayVideo();            // tap outside the box
+      if (e.target.id === "vidRetry") openPlayVideo(+document.getElementById("vidBody").dataset.i);
+    });
+    document.getElementById("vidAlt").onclick = () => {                     // switch broadcast ⇄ pitch cam
+      const a = vidAltClip; if (!a) return;
+      const i = document.getElementById("vidBody").dataset.i;
+      vidShow(a.url, a.cap, a.back ? Object.assign({}, a.back, { back: a }) : null);
+      document.getElementById("vidBody").dataset.i = i;
+    };
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && document.getElementById("vidOverlay").classList.contains("open")) closePlayVideo(); });
+    function premiumVideoRefresh() {
+      document.getElementById("vidHint").style.display = isPremium() ? "none" : "";
+      if (!isPremium() && document.getElementById("vidOverlay").classList.contains("open")) closePlayVideo();
+      feedDirty = true; tick();                                             // add / remove the ▶ buttons
+    }
+    window.addEventListener("arcade-premium-change", premiumVideoRefresh);
+    window.addEventListener("storage", premiumVideoRefresh);
+    document.getElementById("vidHint").style.display = isPremium() ? "none" : "";
     // replay the current game from the start (works for a finished OR in-progress game)
     document.getElementById("replay").onclick = function () {
       const fc = feeds[current]; if (!fc) return;
