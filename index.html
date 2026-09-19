@@ -2089,7 +2089,7 @@
     <button class="btn" id="poBtn" title="Playoff picture & predictions">🏆 Playoffs</button>
     <button class="btn" id="lvlBtn" title="Your level, quests & streak">🏅 Lv 1</button>
     <button class="btn" id="guideBtn" title="Complete field guide to the app">📖 Guide</button>
-    <button class="btn" id="storeBtn" title="Baseball Pass — games, passes & the guide">🎟️ Store</button>
+    <button class="btn" id="storeBtn" title="Baseball Pass — games, passes & the guide" style="display:none">🎟️ Store</button>
     <div class="sub" id="sub">Loading today's slate…</div>
   </header>
 
@@ -6177,7 +6177,7 @@
       var overlay = document.getElementById("guideOverlay");
       var loaded = false;
       function openGuide() {
-        if (!(GP.store.guide || GP.store.alwaysUpdate)) {   // guide costs $4 (or comes with Always-updated)
+        if (false) {   // the guide used to cost $4 in the Baseball Pass, which is switched off
           if (typeof toast === "function") toast("📖 The guide unlocks for $4 in the Store");
           if (typeof storeOpen === "function") storeOpen("guide");
           return;
@@ -6221,6 +6221,7 @@
     function storePassActive() { return S().passUntil > Date.now(); }
     // may this game be watched? consumes the free view / a credit if needed
     function storeTryWatch(pk) {
+      return true;   // the Baseball Pass is switched off (user, 2026-09-19): every game is free
       const s = S(), k = String(pk);
       if (k.startsWith("ump-") || k.startsWith("sim-")) return true;   // your own umpire/sim games are always free
       if (s.unlocked.includes(k)) return true;                          // already yours — rewatch free
